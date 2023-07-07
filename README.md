@@ -43,7 +43,7 @@ kitti
 ```
 - opencv, pillow, scipy, matplotlib
 ```
-(kitti_vis)$ pip install requirements.txt
+(kitti_vis)$ pip install -r requirements.txt
 ```
 - install mayavi from conda-forge, this installs vtk and pyqt5 automatically
 ```
