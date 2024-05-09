@@ -71,6 +71,7 @@ class KITTIDataset(object):
         self.depth_dir = args.depth_dir if args.depth_dir else os.path.join(self.split_dir, depth_dir_name)
         self.pred_dir = args.pred_dir if args.pred_dir else os.path.join(self.split_dir, pred_dir_name)
         self.out_dir = args.out_dir
+        self.seq_ids = args.seq_ids
 
         if args.tracking:
             # load seq ids and count total num. of sample
@@ -116,6 +117,11 @@ class KITTIDataset(object):
                         trk_preds_all_frames[frame_id].append(Object3d(data=data))
                     self._trk_pred_all_seqs[seq_id] = trk_preds_all_frames
         else:
+            # self.seq_ids = args.seq_ids if args.seq_ids else False
+            # if self.seq_ids:
+            #     self.sample_ids = args.pred_dir / ('%s.txt' % args.seq_ids)
+            #     self.num_samples = 1 # Visualize a single scene
+            # else:
             self.sample_ids = sorted([int(sample.split(".")[0]) for sample in os.listdir(self.pred_dir)])
             self.num_samples = len(self.sample_ids)
 
@@ -172,17 +178,26 @@ class KITTIDataset(object):
                 for sample_id in sample_ids:
                     yield sample_id, seq_id
         else:
-            for sample_id in self.sample_ids:
-                yield sample_id
+            if self.seq_ids:
+                    assert self.seq_ids[0] in self.sample_ids, "frame_id of PL invalid"
+                    yield self.seq_ids
+            else:
+                for sample_id in self.sample_ids:
+                    yield sample_id
 
     def check_idx(self, idx, seq_idx=None):
         if isinstance(self.sample_ids, dict):
             sample_ids = self.sample_ids[seq_idx]
         else:
-            sample_ids = self.sample_ids
-        assert idx in sample_ids
+            if self.seq_ids:
+                sample_ids = self.seq_ids
+            else:
+                sample_ids = self.sample_ids
+                assert idx in sample_ids
 
     def get_image(self, idx, seq_idx=None):
+        if isinstance(idx,list):
+            idx = idx[0]
         self.check_idx(idx, seq_idx)
         if seq_idx:
             img_path = os.path.join(self.image_dir, "{:04d}".format(int(seq_idx)), "{:06d}.png".format(int(idx)))
@@ -191,6 +206,8 @@ class KITTIDataset(object):
         return utils.load_image(img_path)
 
     def get_lidar(self, idx, seq_idx=None, dtype=np.float32, n_vec=4):
+        if isinstance(idx,list):
+            idx = idx[0]
         self.check_idx(idx, seq_idx)
         if seq_idx:
             lidar_path = os.path.join(self.lidar_dir, "{:04d}".format(int(seq_idx)), "{:06d}.bin".format(int(idx)))
@@ -199,6 +216,8 @@ class KITTIDataset(object):
         return utils.load_velo_scan(lidar_path, dtype, n_vec)
 
     def get_calibration(self, idx, seq_idx=None):
+        if isinstance(idx,list):
+            idx = idx[0]        
         self.check_idx(idx, seq_idx)
         if seq_idx:
             calib_path = os.path.join(self.calib_dir, "{:04d}.txt".format(int(seq_idx)))
@@ -207,6 +226,8 @@ class KITTIDataset(object):
         return utils.Calibration(calib_path)
 
     def get_label_objects(self, idx, seq_idx=None):
+        if isinstance(idx,list):
+            idx = idx[0]
         self.check_idx(idx, seq_idx)
         if seq_idx:
             return self._trk_label_all_seqs[seq_idx][idx]
@@ -215,6 +236,8 @@ class KITTIDataset(object):
             return utils.read_label(label_path)
 
     def get_pred_objets(self, idx, seq_idx=None):
+        if isinstance(idx,list):
+            idx = idx[0]
         self.check_idx(idx, seq_idx)
         if seq_idx:
             return self._trk_pred_all_seqs[seq_idx][idx]
@@ -282,6 +305,8 @@ class Visualizer(object):
                 executor.map(vis.run_pipeline, self.dataset)
         else:
             for data_index in tqdm.tqdm(self.dataset):
+                # if args.seq_ids:
+                #     self.run_pipeline(data_index, seq_idx=args.seq_ids)
                 if isinstance(data_index, tuple):
                     self.run_pipeline(*data_index)
                 else:
@@ -810,12 +835,18 @@ class Visualizer(object):
 
         if args.save:
             seq_id_str = "{:04d}".format(int(seq_idx)) if seq_idx is not None else ""
-            file_name = "{:06d}.png".format(int(data_idx))
+            if args.seq_ids:
+                file_name = "{:06d}.png".format(int(data_idx[0]))
+            else:
+                file_name = "{:06d}.png".format(int(data_idx))
+            print("Codeflow")
             if 'lidar' in args.save:
                 fig_dir = os.path.join(str(self.lidar_output), seq_id_str)
                 if not os.path.exists(fig_dir): os.mkdir(fig_dir)
                 fig_path = fig_dir + "/" + file_name
                 mlab.savefig(filename=fig_path, figure=self.fig)
+            if args.seq_ids:
+                exit()
             if 'camera' in args.save:
                 fig_dir = os.path.join(str(self.camera_output), seq_id_str)
                 if not os.path.exists(fig_dir): os.mkdir(fig_dir)
