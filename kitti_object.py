@@ -35,7 +35,7 @@ if os.name == 'posix' and "DISPLAY" not in os.environ:
 else:
     import mayavi.mlab as mlab
     headless_server = False
-from viz_util import draw_lidar, draw_gt_boxes3d
+from viz_util import draw_lidar, draw_gt_boxes3d, draw_pred_boxes3d
 from collections import defaultdict
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -282,14 +282,16 @@ class Visualizer(object):
                                                     cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'),
                                                     20, (1248, 384))
         if args.save:
+            save_options = args.save
             mlab.options.offscreen = True
 
             self.output_path = Path(args.out_dir)
             self.output_path.mkdir(exist_ok=True)
-            if 'camera' in args.save:
+            if 'camera' in save_options:
                 self.camera_output = self.output_path / 'image_02'
+                self.camera_output.mkdir(exist_ok=True)
                 
-            if 'lidar' in args.save:
+            if 'lidar' in save_options:
                 self.lidar_output = self.output_path / 'velodyne'
                 self.lidar_output.mkdir(exist_ok=True)
 
@@ -350,7 +352,7 @@ class Visualizer(object):
                     if hasattr(pred, 'id'):
                         color = tuple([int(c * 255) for c in colors[int(pred.id) % max_color]])
                     else:
-                        color = (0, 255, 0)
+                        color = (0, 0, 255)
                     box3d_pts_2d, _ = utils.compute_box_3d(pred, calib.P)
                     if box3d_pts_2d is None:
                         continue
@@ -508,7 +510,7 @@ class Visualizer(object):
                 # Draw 3d bounding box
                 _, box3d_pts_3d = utils.compute_box_3d(obj, calib.P)
                 box3d_pts_3d_velo = calib.project_rect_to_velo(box3d_pts_3d)
-                # color = tuple(colors[int(obj.id) % max_color])
+                color = tuple(colors[int(len(obj.type))*2 % max_color])
 
                 # this works with unchanged MOT code
                 # box3d_pts_3d_velo = calib.project_rect_to_velo(box3d_pts_3d)
@@ -521,10 +523,10 @@ class Visualizer(object):
 
                 print("box3d_pts_3d_velo (Pred {}):".format(str(i + 1)))
                 # label = str(obj.type)[:3] + ' %d' % obj.id + ': {:.1f}'.format(obj.score)
-                label = str(obj.type)[:3] + ': {:.1f}'.format(obj.score)
+                label = str(obj.type)[:3] + ': {:.2f}'.format(obj.score)
                 # draw_gt_boxes3d([box3d_pts_3d_velo], fig=self.fig, color=color, label=label)
                 # draw_gt_boxes3d([box3d_pts_3d_velo], fig=self.fig, label=label)
-                draw_gt_boxes3d([box3d_pts_3d_world], fig=self.fig, label=label)
+                draw_pred_boxes3d([box3d_pts_3d_world], fig=self.fig, color=color, label=label)
                 # Draw heading arrow
                 _, ori3d_pts_3d, vel_3d = utils.compute_orientation_3d(obj, calib.P)
                 ori3d_pts_3d_velo = calib.project_rect_to_velo(ori3d_pts_3d)
@@ -864,14 +866,14 @@ class Visualizer(object):
                 if not os.path.exists(fig_dir): os.mkdir(fig_dir)
                 fig_path = fig_dir + "/" + file_name
                 mlab.savefig(filename=fig_path, figure=self.fig)
-            if args.seq_ids:
-                exit()
+
             if 'camera' in args.save:
                 fig_dir = os.path.join(str(self.camera_output), seq_id_str)
                 if not os.path.exists(fig_dir): os.mkdir(fig_dir)
                 fig_path = fig_dir + "/" + file_name
                 cv2.imwrite(filename=fig_path, img=img)
-
+            # if args.seq_ids:
+            #     exit()
         # TODO(farzad) Followings should be adapted for parallelism
         # Creating demo video. Currently no multithreading!
         assert args.workers == 0

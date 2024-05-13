@@ -236,7 +236,7 @@ def draw_gt_boxes3d(
     color=(1, 1, 1),
     line_width=2,
     draw_text=True,
-    text_scale=(.6, .6, .6),
+    text_scale=(.4, .4, .4),
     color_list=None,
     label=""
 ):
@@ -259,9 +259,83 @@ def draw_gt_boxes3d(
             color = color_list[n]
         if draw_text:
             mlab.text3d(
-                b[5, 0],
-                b[5, 1],
-                b[5, 2],
+                b[7, 0],
+                b[7, 1],
+                b[7, 2],
+                label,
+                scale=text_scale,
+                color=color,
+                figure=fig,
+            )
+        for k in range(0, 4):
+            # http://docs.enthought.com/mayavi/mayavi/auto/mlab_helper_functions.html
+            i, j = k, (k + 1) % 4
+            mlab.plot3d(
+                [b[i, 0], b[j, 0]],
+                [b[i, 1], b[j, 1]],
+                [b[i, 2], b[j, 2]],
+                color=color,
+                tube_radius=None,
+                line_width=line_width,
+                figure=fig,
+            )
+
+            i, j = k + 4, (k + 1) % 4 + 4
+            mlab.plot3d(
+                [b[i, 0], b[j, 0]],
+                [b[i, 1], b[j, 1]],
+                [b[i, 2], b[j, 2]],
+                color=color,
+                tube_radius=None,
+                line_width=line_width,
+                figure=fig,
+            )
+
+            i, j = k, k + 4
+            mlab.plot3d(
+                [b[i, 0], b[j, 0]],
+                [b[i, 1], b[j, 1]],
+                [b[i, 2], b[j, 2]],
+                color=color,
+                tube_radius=None,
+                line_width=line_width,
+                figure=fig,
+            )
+    return fig
+
+
+def draw_pred_boxes3d(
+    gt_boxes3d,
+    fig,
+    color=(1, 1, 1),
+    line_width=2,
+    draw_text=True,
+    text_scale=(.4, .4, .4),
+    color_list=None,
+    label=""
+):
+    """ Draw 3D bounding boxes
+    Args:
+        gt_boxes3d: numpy array (n,8,3) for XYZs of the box corners
+        fig: mayavi figure handler
+        color: RGB value tuple in range (0,1), box line color
+        line_width: box line width
+        draw_text: boolean, if true, write box indices beside boxes
+        text_scale: three number tuple
+        color_list: a list of RGB tuple, if not None, overwrite color.
+    Returns:
+        fig: updated fig
+    """
+    num = len(gt_boxes3d)
+    for n in range(num):
+        b = gt_boxes3d[n]
+        if color_list is not None:
+            color = color_list[n]
+        if draw_text:
+            mlab.text3d(
+                b[2, 0],
+                b[2, 1],
+                b[2, 2],
                 label,
                 scale=text_scale,
                 color=color,
