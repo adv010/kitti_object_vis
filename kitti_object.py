@@ -4,7 +4,7 @@ Author: Charles R. Qi
 Date: September 2017
 """
 from __future__ import print_function
-
+import matplotlib.pyplot as plt
 import os
 import sys
 import numpy as np
@@ -443,7 +443,7 @@ class Visualizer(object):
         cv2.imwrite("imgs/" + str(name) + ".png", img1)
 
     def show_lidar_with_depth(self, pc_velo, objects, calib, img_fov=False, img_width=None, img_height=None,
-                              objects_pred=None, depth=None, constraint_box=False, pc_label=False, save=False,
+                              objects_pred=None, depth=None, preds_only=False, gts_only=False, constraint_box=False, pc_label=False, save=False,
                               score_threshold=0.0, data_idx=None):
 
         """ Show all LiDAR points.
@@ -477,22 +477,29 @@ class Visualizer(object):
                 data_idx = 0
                 vely_dir = "data/object/training/depth_pc"
                 save_filename = os.path.join(vely_dir, "%06d.bin" % data_idx)
+                # if preds_only:
+                #     save_filename = os.path.join(f"{vely_dir}_preds", "%06d.bin" % data_idx)
+                # elif gts_only:
+                #     save_filename = os.path.join(f"{vely_dir}_gts", "%06d.bin" % data_idx)
+                # else:
+                #     save_filename =  os.path.join(vely_dir, "%06d.bin" % data_idx) 
                 print(save_filename)
                 # np.save(save_filename+".npy", np.array(depth_pc_velo))
                 depth_pc_velo = depth_pc_velo.astype(np.float32)
                 depth_pc_velo.tofile(save_filename)
 
-        color = (0, 1, 0)
-        for i, obj in enumerate(objects):
-            if obj.type == "DontCare":
-                continue
-            # Draw 3d bounding box
-            _, box3d_pts_3d = utils.compute_box_3d(obj, calib.P)
-            box3d_pts_3d_velo = calib.project_rect_to_velo(box3d_pts_3d)
-            draw_gt_boxes3d([box3d_pts_3d_velo], fig=self.fig, color=color,
-                            label=str(obj.type) + '- Obj. ' + str(i + 1))
+        if not preds_only:
+            color = (0, 1, 0)
+            for i, obj in enumerate(objects):
+                if obj.type == "DontCare":
+                    continue
+                # Draw 3d bounding box
+                _, box3d_pts_3d = utils.compute_box_3d(obj, calib.P)
+                box3d_pts_3d_velo = calib.project_rect_to_velo(box3d_pts_3d)
+                draw_gt_boxes3d([box3d_pts_3d_velo], fig=self.fig, color=color,
+                                label=str(obj.type) + '- Obj. ' + str(i + 1))
 
-        if objects_pred is not None:
+        if objects_pred is not None and not gts_only:
             for i, obj in enumerate(objects_pred):
                 if obj.type == "DontCare":
                     continue
@@ -714,7 +721,7 @@ class Visualizer(object):
             )
         return img
 
-    def show_lidar_topview_with_boxes(self, pc_velo, objects, calib, objects_pred=None):
+    def show_lidar_topview_with_boxes(self,data_idx, pc_velo, objects, calib, objects_pred=None):
         """ top_view image"""
         # print('pc_velo shape: ',pc_velo.shape)
         top_view = utils.lidar_to_top(pc_velo)
@@ -742,6 +749,11 @@ class Visualizer(object):
                 top_image, gt, text_lables=lines, scores=None, thickness=1, is_gt=False
             )
 
+        img_rgb = cv2.cvtColor(top_image, cv2.COLOR_BGR2RGB)
+        filename = f"{data_idx}_topview.png"
+        save_path = os.path.join("/mnt/data/adat01/kitti_object_vis/output/velodyne", filename)
+        plt.imsave(save_path, img_rgb)        
+        print("Image saved as topview.png")
         cv2.imshow("top_image", top_image)
         return top_image
 
@@ -804,7 +816,7 @@ class Visualizer(object):
         # Draw 3d box in LiDAR point cloud
         if args.show_lidar_topview_with_boxes:
             # Draw lidar top view
-            self.show_lidar_topview_with_boxes(pc_velo, objects_gt, calib, objects_pred)
+            self.show_lidar_topview_with_boxes(data_idx,pc_velo, objects_gt, calib, objects_pred)
 
         if args.show_image_with_boxes:
             logging.debug(data_idx, "image shape: ", img.shape)
@@ -824,6 +836,8 @@ class Visualizer(object):
                 img_height,
                 objects_pred,
                 depth,
+                preds_only=args.preds_only,
+                gts_only = args.gts_only,
                 constraint_box=args.const_box,
                 save=args.save_depth,
                 pc_label=args.pc_label,
@@ -836,7 +850,12 @@ class Visualizer(object):
         if args.save:
             seq_id_str = "{:04d}".format(int(seq_idx)) if seq_idx is not None else ""
             if args.seq_ids:
-                file_name = "{:06d}.png".format(int(data_idx[0]))
+                if args.preds_only:
+                    file_name = "{:06d}_preds.png".format(int(data_idx[0]))
+                elif args.gts_only:
+                    file_name = "{:06d}_gts.png".format(int(data_idx[0]))
+                else:
+                    file_name = "{:06d}.png".format(int(data_idx[0]))
             else:
                 file_name = "{:06d}.png".format(int(data_idx))
             print("Codeflow")
@@ -1086,6 +1105,14 @@ if __name__ == "__main__":
         type=int,
         default=0,
         help="Num. of workers for visualization. 0 means no multithreading. Demo mode only works w/o multithreading!"
+    )
+
+    parser.add_argument(
+        "--preds_only", action="store_true", help="show only predictions"
+    )
+
+    parser.add_argument(
+        "--gts_only", action="store_true", help="show only GTs"
     )
 
     args = parser.parse_args()
