@@ -42,7 +42,7 @@
             "justMyCode": true,
             "args":[
                 "--dir", "/mnt/data/shag01/pcdet-st-reliable/OpenPCDet/data/kitti",
-                "--pred_dir", "/mnt/data/adat01/adv_OpenPCDet/output/kitti_models/pv_rcnn_ssl_60/new_main_3diou_ckpt_36221f4_frame_dupl_counter_447fde5/final_result/data/",
+                "--pred_dir", "/mnt/data/adat01/adv_OpenPCDet/output/cfgs/kitti_models/pv_rcnn_ssl_60/new_main_3diou_ckpt_36221f4_debug_d171a9a/final_result/data/",
                 "--label_dir", "/mnt/data/adat01/adv_OpenPCDet/data/kitti/training/label_2",
                 "--split", "training",
                 "--vis",
@@ -52,7 +52,7 @@
                 // "--save", "lidar",
                 "--save", "lidar","camera",
                 "--out_dir", "output/",
-                "--seq_ids","7118",
+                "--seq_ids","0082",
                 "--img_fov",
                 "--const_box",
                 "--show_image_with_boxes"

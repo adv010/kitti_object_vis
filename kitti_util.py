@@ -93,10 +93,10 @@ class Object3d(object):
 
         try:
             self.score = data[15]
-            self.id = data[16]
-            self.vx = data[17]
-            self.vy = data[18]
-            self.vz = data[19]
+            # self.id = data[16]
+            # self.vx = data[17]
+            # self.vy = data[18]
+            # self.vz = data[19]
         except:
             pass
 
